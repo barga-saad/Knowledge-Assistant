@@ -10,7 +10,6 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func as sqla_func
-from pgvector.sqlalchemy import Vector
 
 from app.core.database import Base
 from datetime import datetime, timezone
@@ -115,8 +114,9 @@ class DocumentChunk(Base):
     chunk_index = Column(Integer, nullable=False)
     content = Column(Text, nullable=False)
     content_length = Column(Integer)
-    # Vector embedding - 1536 dimensions (standard for embeddings)
-    embedding = Column(Vector(1536))
+    # Vector embedding - TEMPORARILY DISABLED (pgvector not available in image)
+    # embedding = Column(Vector(1536))  # Will be enabled after fixing pgvector
+    embedding_serialized = Column(Text)  # Store as JSON string for now
     metadata = Column(JSONB)
     created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc))
     

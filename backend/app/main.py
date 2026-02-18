@@ -3,6 +3,7 @@ Main FastAPI application entry point
 """
 
 import logging
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -27,15 +28,31 @@ async def lifespan(app: FastAPI):
     """
     Application startup and shutdown events.
     
-    Startup: Initialize database tables
+    Startup: Initialize database tables with retry logic
     Shutdown: Clean up resources
     """
-    # Startup
+    # Startup - with retry logic for database connection
     logger.info("🚀 Application starting up...")
-    async with engine.begin() as conn:
-        # Create all tables if they don't exist
-        await conn.run_sync(Base.metadata.create_all)
-    logger.info("✅ Database initialized")
+    max_retries = 5
+    retry_delay = 2  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            async with engine.begin() as conn:
+                # Create all tables if they don't exist
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("✅ Database initialized successfully")
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                logger.warning(f"⚠️  Database connection attempt {attempt + 1}/{max_retries} failed: {str(e)}")
+                logger.info(f"⏳ Retrying in {retry_delay} seconds...")
+                await asyncio.sleep(retry_delay)
+            else:
+                logger.error(f"❌ Failed to connect to database after {max_retries} attempts")
+                logger.error(f"Error: {str(e)}")
+                # Continue anyway - database might be initializing
+                logger.info("⚠️  Starting application without database connection (will retry on requests)")
     
     yield
     
