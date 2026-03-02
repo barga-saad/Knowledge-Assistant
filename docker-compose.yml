@@ -1,0 +1,180 @@
+services:
+  # ========================
+  # PostgreSQL Database with pgvector
+  # ========================
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: knowledge-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - knowledge-network
+
+  # ========================
+  # Redis Cache & Sessions
+  # ========================
+  redis:
+    image: redis:7-alpine
+    container_name: knowledge-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - knowledge-network
+
+  # ========================
+  # Keycloak (OpenID Connect / OAuth2)
+  # ========================
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: knowledge-keycloak
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://knowledge-db:5432/${POSTGRES_DB}
+      KC_DB_USERNAME: postgres
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_PROXY: edge
+      KC_HOSTNAME_STRICT: 'false'
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command:
+      - "start-dev"
+    restart: on-failure
+    volumes:
+      - ./docker/keycloak-realm.json:/opt/keycloak/realm.json
+    networks:
+      - knowledge-network
+
+  # ========================
+  # Ollama (Local LLM - Llama2-7B)
+  # ========================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: knowledge-ollama
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    volumes:
+      - ollama_data:/root/.ollama
+    # Note: Models will be pulled on first run
+    # To pre-load: docker exec knowledge-ollama ollama pull llama2:7b
+    networks:
+      - knowledge-network
+
+  # ========================
+  # Backend API (FastAPI)
+  # ========================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: knowledge-backend
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      BACKEND_ENV: ${BACKEND_ENV}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS}
+      KEYCLOAK_URL: ${KEYCLOAK_URL}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      AI_SERVICE_URL: http://ai-service:${AI_SERVICE_PORT}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      DOCUMENTS_DIR: ${DOCUMENTS_DIR}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - backend_documents:/app/documents
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    networks:
+      - knowledge-network
+
+  # ========================
+  # AI Service (FastAPI + Ollama)
+  # ========================
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: knowledge-ai-service
+    environment:
+      OLLAMA_HOST: ${OLLAMA_HOST}
+      OLLAMA_MODEL: ${OLLAMA_MODEL}
+      BACKEND_URL: http://backend:8000
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./ai-service:/app
+    depends_on:
+      - ollama
+    networks:
+      - knowledge-network
+
+  # ========================
+  # Nginx Reverse Proxy
+  # ========================
+  nginx:
+    image: nginx:alpine
+    container_name: knowledge-nginx
+    ports:
+      - "8080:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/certs:/etc/nginx/certs:ro
+    depends_on:
+      - backend
+      - keycloak
+    networks:
+      - knowledge-network
+    profiles:
+      - nginx
+
+volumes:
+  postgres_data:
+  redis_data:
+  ollama_data:
+  backend_documents:
+
+networks:
+  knowledge-network:
+    driver: bridge

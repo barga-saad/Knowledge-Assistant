@@ -1,0 +1,18 @@
+knowledge-db          |         Connection matched file "/var/lib/postgresql/data/pg_hba.conf" line 128: "host all all all scram-sha-256"
+knowledge-keycloak    | 2026-02-18 14:59:10,171 ERROR [org.keycloak.quarkus.runtime.cli.ExecutionExceptionHandler] (main) ERROR: Failed to start server in (development) mode
+knowledge-keycloak    | 2026-02-18 14:59:10,171 ERROR [org.keycloak.quarkus.runtime.cli.ExecutionExceptionHandler] (main) ERROR: Failed to start server in (development) mode
+knowledge-keycloak    | 2026-02-18 14:59:10,172 ERROR [org.keycloak.quarkus.runtime.cli.ExecutionExceptionHandler] (main) ERROR: Failed to obtain JDBC connection
+knowledge-keycloak    | 2026-02-18 14:59:10,172 ERROR [org.keycloak.quarkus.runtime.cli.ExecutionExceptionHandler] (main) ERROR: FATAL: password authentication failed for user "postgres"
+knowledge-keycloak    | 2026-02-18 14:59:10,172 ERROR [org.keycloak.quarkus.runtime.cli.ExecutionExceptionHandler] (main) For more details run the same command passing the '--verbose' option. Also you can use '--help' to see the details about the usage of the particular command.
+knowledge-keycloak    | 2026-02-18 14:59:10,172 ERROR [org.keycloak.quarkus.runtime.cli.ExecutionExceptionHandler] (main) ERROR: Failed to obtain JDBC connection
+knowledge-keycloak    | 2026-02-18 14:59:10,172 ERROR [org.keycloak.quarkus.runtime.cli.ExecutionExceptionHandler] (main) ERROR: FATAL: password authentication failed for user "postgres"                                                          
+knowledge-keycloak    | 2026-02-18 14:59:10,172 ERROR [org.keycloak.quarkus.runtime.cli.ExecutionExceptionHandler] (main) For more details run the same command passing the '--verbose' option. Also you can use '--help' to see the details about the usage of the particular command.
+knowledge-keycloak exited with code 1
+knowledge-db          | 2026-02-18 14:59:12.864 UTC [64] FATAL:  role "postgres" does not exist
+knowledge-db          | 2026-02-18 14:59:12.864 UTC [64] FATAL:  role "postgres" does not exist
+knowledge-db          | 2026-02-18 14:59:22.956 UTC [73] FATAL:  role "postgres" does not exist
+knowledge-db          | 2026-02-18 14:59:22.956 UTC [73] FATAL:  role "postgres" does not exist
+knowledge-db          | 2026-02-18 14:59:33.048 UTC [81] FATAL:  role "postgres" does not exist
+knowledge-db          | 2026-02-18 14:59:33.048 UTC [81] FATAL:  role "postgres" does not exist
+Gracefully Stopping... press Ctrl+C again to force
+Error response from daemon: ports are not available: exposing port TCP 0.0.0.0:80 -> 127.0.0.1:0: listen tcp 0.0.0.0:80: bind: Une tentative d’accès à un socket de manière 
