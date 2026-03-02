@@ -732,6 +732,50 @@ OPTION D - Conversation Management:
 AWAITING USER SELECTION FOR IMPLEMENTATION PRIORITY.
 
 ================================================================================
+
+
+ERRORS ENCOUNTERED DURING DOCKER COMPOSE UP (March 2, 2026):
+
+1. **Keycloak startup failure** (initial run):
+   - Warning: unable to obtain JDBC connection.
+   - Cause: `java.net.UnknownHostException: postgres` – Keycloak was pointing at
+     hostname `postgres` which did not correspond to the service name. This was
+     corrected and the error disappeared on restart.
+   - Secondary symptom: repeated `role "root" does not exist` errors from
+     PostgreSQL while Keycloak attempted to connect using default credentials.
+
+2. **PostgreSQL error logs** (persistent):
+   - After restarting, Postgres still logged `FATAL: role "root" does not exist`
+     at ~10‑second intervals.
+   - Investigation revealed the **healthcheck command** of the Postgres service
+     was the culprit. It runs `pg_isready -h localhost` inside the container,
+     which by default uses the OS user (`root`) as the Postgres role. Since no
+     `root` user exists, each healthcheck produced a fatal message.
+
+INVESTIGATION & FIXES:
+- Checked `.env` variables and confirm POSTGRES_USER is set to `postgres`.
+- Inspected `docker-compose.yml`:
+  ```yaml
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -h localhost"]
+  ```
+- Solution: modify the healthcheck to specify the correct user or set
+  `PGUSER=postgres`.
+
+EXAMPLE UPDATED HEALTHCHECK:
+```yaml
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -h localhost -U postgres"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+```
+
+NEXT ACTIONS:
+- Apply the healthcheck change in `docker-compose.yml`.
+- Re-launch the stack and verify the fatal messages stop.
+- Proceed with Phase 2 tasks once the environment is stable.
+
                      NEXT IMMEDIATE STEPS
 ================================================================================
 
