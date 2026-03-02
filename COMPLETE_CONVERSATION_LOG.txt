@@ -278,5 +278,55 @@ Next actions:
 
 ──────────────────────────────────────────────────────────────────────────────
 
+TURN 5: DOCUMENT UPLOAD FEATURE ADDED
+──────────────────────────────────────────────────────────────────────────────
+
+User requested beginning Phase 2 with document upload implementation.
+
+Implemented in `backend/app/api/routes/documents.py`:
+- POST /upload endpoint accepts title, description, public flag and file.
+- Validates extension (only pdf/txt) and size (<50MB).
+- Saves file under configured DOCUMENTS_DIR with a UUID prefix.
+- Inserts a Document record in the database with status PENDING.
+- Returns the new document metadata using DocumentResponse schema.
+- Added background task scheduling to process document chunks.
+
+Also added `backend/app/services/document_service.py` with simple
+chunk_text and process_document functions to read file and create
+DocumentChunk entries.
+
+Authentication is not yet available; owner_id is currently a random UUID.
+
+NEXT STEPS:
+- Restart backend and exercise the upload endpoint (curl or Postman).
+- Continue with file parsing and chunking next.
+- Write tests for processing service.
+
 
 ================================================================================
+
+TURN 6: USER REQUESTS "just update all the contexte and all the chat history \n\nupdate all  with all details "
+──────────────────────────────────────────────────────────────────────────────
+
+[USER MESSAGE]
+
+"just update all the contexte and all the chat history 
+
+update all  with all details "
+
+[END USER MESSAGE]
+
+ANALYSIS:
+The user asked for a comprehensive refresh of both the conversation log and the
+project context document to ensure they reflect all recent activity including
+this request itself. This involves appending new entries and confirming that
+all details are included.
+
+ACTIONS TAKEN:
+- Added a new turn entry to this log (Turn 6) capturing the user's demand.
+- Prepared to update PROJECT_DETAILED_CONTEXT.txt accordingly after this insert.
+
+NEXT STEPS:
+- Append an explanatory note in the context file about the update request.
+- Ensure both files remain synchronized and complete.
+

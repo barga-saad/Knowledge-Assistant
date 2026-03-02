@@ -4,9 +4,15 @@ Upload, list, delete documents
 """
 
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
+import os
+from uuid import uuid4
+
+from app.core.config import settings
+from app.models import Document, DocumentStatus
+from app.services.document_service import process_document
 
 from app.core.database import get_db
 from app.schemas import DocumentResponse
@@ -35,21 +41,64 @@ async def list_documents(
     return []
 
 
-@router.post("/upload")
+@router.post("/upload", response_model=DocumentResponse)
 async def upload_document(
+    title: str = Form(...),
+    description: str = Form(None),
+    is_public: bool = Form(False),
+    file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
+    background_tasks: BackgroundTasks = Depends(),
 ):
     """
     Upload a new document (PDF or TXT).
-    
-    The document will be:
-    1. Stored in file storage
-    2. Parsed for content
-    3. Chunks created and embedded
-    4. Made searchable via vector DB
+
+    Saves file, creates database record with status PENDING.
     """
-    # TODO: Implement file upload
-    pass
+    # validate extension
+    filename = file.filename
+    ext = os.path.splitext(filename)[1].lower().lstrip('.')
+    if ext not in settings.ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File type .{ext} not allowed",
+        )
+
+    contents = await file.read()
+    size = len(contents)
+    if size > settings.MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File too large (max {settings.MAX_FILE_SIZE} bytes)",
+        )
+
+    # ensure directory exists
+    os.makedirs(settings.DOCUMENTS_DIR, exist_ok=True)
+    unique_name = f"{uuid4()}_{filename}"
+    dest_path = os.path.join(settings.DOCUMENTS_DIR, unique_name)
+    with open(dest_path, "wb") as f:
+        f.write(contents)
+
+    # create db record (owner not implemented yet)
+    new_doc = Document(
+        owner_id=uuid4(),
+        title=title,
+        description=description,
+        file_path=dest_path,
+        file_name=filename,
+        file_size=size,
+        file_type=ext,
+        status=DocumentStatus.PENDING,
+        is_public=is_public,
+    )
+    db.add(new_doc)
+    await db.commit()
+    await db.refresh(new_doc)
+
+    # schedule processing in background
+    background_tasks.add_task(process_document, new_doc, db)
+
+    return new_doc
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
