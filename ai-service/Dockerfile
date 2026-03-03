@@ -4,8 +4,6 @@ WORKDIR /app
 
 # Install system dependencies and CA certificates
 RUN apt-get update && apt-get install -y \
-    gcc \
-    curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
@@ -17,4 +15,5 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application
 COPY . .
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+# Run the app
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]

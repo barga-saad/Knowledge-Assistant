@@ -1,59 +1,55 @@
-"""
-Business logic for document processing (Phase 2)
-"""
-import os
-from typing import List
-from app.models import Document, DocumentChunk, DocumentStatus
-from app.core.config import settings
+import logging
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from uuid import uuid4
+from app.models.document_models import Document, DocumentChunk
+from app.core.database import SessionLocal
+from app.core.config import settings
+import asyncio
 
+logger = logging.getLogger(__name__)
 
-def chunk_text(text: str, chunk_size: int = 1000) -> List[str]:
-    """Split text into chunks of roughly chunk_size characters."""
-    chunks = []
-    start = 0
-    while start < len(text):
-        end = start + chunk_size
-        chunks.append(text[start:end])
-        start = end
-    return chunks
-
-
-async def process_document(document: Document, db: AsyncSession):
-    """Read saved file, split into chunks, store in DocumentChunk table.
-    Update status accordingly.
+async def process_document(document_id: str):
     """
-    document.status = DocumentStatus.PROCESSING
-    await db.commit()
-    await db.refresh(document)
+    Background task to process a document: extract text, create chunks, and generate embeddings.
+    """
+    logger.info(f"Starting processing for document {document_id}")
 
-    try:
-        # read file
-        with open(document.file_path, "r", encoding="utf-8", errors="ignore") as f:
-            contents = f.read()
+    async with SessionLocal() as db:
+        try:
+            document = await db.get(Document, document_id)
+            if not document:
+                logger.error(f"Document {document_id} not found for processing.")
+                return
 
-        chunks = chunk_text(contents)
-        # remove previous chunks if any
-        await db.execute(
-            "DELETE FROM document_chunks WHERE document_id = :id",
-            {"id": str(document.id)}
-        )
+            document.status = 'processing'
+            await db.commit()
+            logger.info(f"Document {document_id} status updated to processing.")
 
-        for idx, chunk in enumerate(chunks):
-            doc_chunk = DocumentChunk(
-                document_id=document.id,
-                chunk_index=idx,
-                content=chunk,
-                content_length=len(chunk),
-            )
-            db.add(doc_chunk)
+            ai_service_url = f"{settings.AI_SERVICE_URL}/process"
+            async with httpx.AsyncClient() as client:
+                response = await client.post(ai_service_url, json={"file_path": document.file_path})
+                response.raise_for_status() 
+                data = response.json()
 
-        document.status = DocumentStatus.COMPLETED
-        document.processed_at = None  # set timestamp later if needed
-        await db.commit()
-    except Exception:
-        document.status = DocumentStatus.FAILED
-        await db.commit()
-        raise
+            for chunk_data in data['chunks']:
+                chunk = DocumentChunk(
+                    content=chunk_data['content'],
+                    embedding=chunk_data['embedding'],
+                    document_id=document_id
+                )
+                db.add(chunk)
+
+            document.status = 'completed'
+            await db.commit()
+            logger.info(f"Successfully processed document {document_id}")
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error occurred while processing document {document_id}: {e.response.text}")
+            await db.rollback()
+            document.status = 'failed'
+            await db.commit()
+        except Exception as e:
+            logger.error(f"Error processing document {document_id}: {e}")
+            await db.rollback()
+            document.status = 'failed'
+            await db.commit()

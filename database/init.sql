@@ -2,10 +2,9 @@
 -- KNOWLEDGE ASSISTANT DATABASE SCHEMA
 -- ========================================
 
--- Enable extensions (pgvector optional for now)
--- Removed pgvector temporarily due to image issues
--- Can be installed later with: CREATE EXTENSION pgvector;
+-- Enable extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS vector;
 
 -- ========================================
 -- ENUM TYPES
@@ -72,17 +71,14 @@ CREATE TABLE document_chunks (
     chunk_index INTEGER NOT NULL,
     content TEXT NOT NULL,
     content_length INTEGER,
-    -- Vector embeddings (1536 dimensions for typical embedding models)
-    -- Temporarily disabled: embedding vector(1536),
-    embedding_serialized TEXT,  -- Store as JSON string for now
+    embedding vector(1536), -- Vector embeddings (1536 dimensions for typical embedding models)
     metadata JSONB, -- page number, section, etc.
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_document_chunks_document_id ON document_chunks(document_id);
--- pgvector index temporarily disabled
--- CREATE INDEX idx_document_chunks_embedding ON document_chunks USING ivfflat (embedding vector_cosine_ops)
---     WITH (lists = 100);
+CREATE INDEX idx_document_chunks_embedding ON document_chunks USING ivfflat (embedding vector_cosine_ops)
+    WITH (lists = 100);
 
 -- ========================================
 -- SEARCH QUERIES TABLE

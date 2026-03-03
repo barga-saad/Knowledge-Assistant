@@ -141,9 +141,10 @@ services:
       OLLAMA_MODEL: ${OLLAMA_MODEL}
       BACKEND_URL: http://backend:8000
     ports:
-      - "8001:8001"
+      - "${AI_SERVICE_PORT}:8001"
     volumes:
       - ./ai-service:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
     depends_on:
       - ollama
     networks:
@@ -156,7 +157,7 @@ services:
     image: nginx:alpine
     container_name: knowledge-nginx
     ports:
-      - "8080:80"
+      - "80:80"
       - "443:443"
     volumes:
       - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
