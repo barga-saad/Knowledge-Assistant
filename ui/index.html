@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge Assistant</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Knowledge Assistant</h1>
+        <div class="upload-section">
+            <input type="file" id="file-input" accept=".txt,.pdf">
+            <button id="upload-button">Upload</button>
+        </div>
+        <div class="chat-section">
+            <div class="chat-history" id="chat-history"></div>
+            <div class="chat-input">
+                <input type="text" id="query-input" placeholder="Ask a question...">
+                <button id="send-button">Send</button>
+            </div>
+        </div>
+    </div>
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

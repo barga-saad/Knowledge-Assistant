@@ -101,3 +101,30 @@ Changes Made:
 - Created `ai-service/tests/test_main.py`
 - Created `ai-service/tests/test_processing.py`
 ==============================
+Timestamp: 2024-05-23 10:15:00
+User Prompt:
+continue
+
+Assistant Response:
+I've created the test suite for the `ai-service` and committed the changes. Now, I will proceed to implement the `embedding_service` and `llm_service` using the `ollama` library. I will use a default embedding model and a default LLM, which you can change later if you wish.
+
+First, I'll update the `embedding_service.py` file to use `ollama` for generating embeddings. I will now implement the `llm_service` to use the `ollama` library for generating responses. I'll use a default model for now. After that, I will stage the changes, commit them with a descriptive message, and then update the `project_history.txt` file. Finally, I will let you know that I have implemented the `embedding_service` and `llm_service` using `ollama` and that you can now specify a different model if you wish. Also, I will tell you that the next step is to create a UI for the application, and I will ask you if you want me to do that.
+
+Commands Executed:
+git add .
+git commit -m "feat(ai-service): implement embedding and llm services using ollama
+
+- Implemented the `embedding_service` to generate embeddings using the `ollama` library.
+- Implemented the `llm_service` to generate responses using the `ollama` library.
+- Used default models for both services, which can be configured as needed."
+git rev-parse --abbrev-ref HEAD
+git rev-parse HEAD
+
+Commit Details:
+Commit Hash: 1a9fdeaa1b8a22e0948e984a58a170e26ee4a4f5
+Branch: feat/suite
+
+Changes Made:
+- Updated `ai-service/app/services/embedding_service.py`
+- Updated `ai-service/app/services/llm_service.py`
+==============================
