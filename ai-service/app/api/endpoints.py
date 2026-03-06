@@ -1,24 +1,15 @@
-from fastapi import APIRouter, HTTPException
-from app.models.api_models import ProcessRequest, ProcessResponse, EmbedRequest, EmbedResponse, GenerateRequest, GenerateResponse
+from fastapi import APIRouter, HTTPException, UploadFile, File
+from app.models.api_models import ProcessResponse, GenerateRequest, GenerateResponse
 from app.services.processing_service import process_document
-from app.services.embedding_service import generate_embedding
 from app.services.llm_service import generate_response
 
 router = APIRouter()
 
 @router.post("/process", response_model=ProcessResponse)
-async def process_document_endpoint(request: ProcessRequest):
+async def process_document_endpoint(file: UploadFile = File(...)):
     try:
-        chunks = await process_document(request.file_path)
+        chunks = await process_document(file.file, file.filename)
         return ProcessResponse(chunks=chunks)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/embed", response_model=EmbedResponse)
-async def embed_endpoint(request: EmbedRequest):
-    try:
-        embedding = await generate_embedding(request.text)
-        return EmbedResponse(embedding=embedding)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
